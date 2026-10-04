@@ -302,3 +302,70 @@ foreach ($products as $product) {
 * **`mysqli_query($conn, $sql)`**: Sends the `INSERT` query to MySQL.
 * If successful, prints `"Inserted: [Product Name]"`.
 * If a failure occurs, prints the specific database error via **`mysqli_error($conn)`**.
+
+
+### Task 3: Update Stock with Transaction Logic
+
+#### 📌 Problem Description
+Create `restock.php` simulating stock shipment intake:
+```php
+$shipment = ["Laptop" => 5, "Mouse" => 50, "Drone" => 20];
+```
+1. Verify if item exists using `SELECT`.
+2. If item exists, run `UPDATE` query adding quantity value (`quantity = quantity + X`). Check affected rows with `mysqli_affected_rows()`.
+3. If item does not exist, print `"Skipped: <name> product not found"`.
+
+---
+
+#### 💻 Full Solution Code
+```php
+<?php
+require_once("connect.php");
+
+$shipment = [
+    "Laptop" => 5,
+    "Mouse"  => 50,
+    "Drone"  => 20 // Product does not exist
+];
+
+foreach ($shipment as $name => $amount) {
+    // 1. Verify product existence
+    $checkSql    = "SELECT * FROM products WHERE name = '$name'";
+    $checkResult = mysqli_query($conn, $checkSql);
+
+    if (mysqli_num_rows($checkResult) === 0) {
+        echo "Skipped: $name (product not found)\n";
+        continue;
+    }
+
+    // 2. Perform atomic stock update
+    $updateSql = "UPDATE products SET quantity = quantity + $amount WHERE name = '$name'";
+    mysqli_query($conn, $updateSql);
+
+    $affected = mysqli_affected_rows($conn);
+    echo "Updated: $name, rows affected: $affected\n";
+}
+
+// Render updated table snapshot
+echo "\n--- Updated Table ---\n";
+$result = mysqli_query($conn, "SELECT * FROM products");
+while ($row = mysqli_fetch_assoc($result)) {
+    echo $row['name'] . " - " . $row['quantity'] . " in stock\n";
+}
+?>
+```
+
+---
+
+#### 🛠️ Step-by-Step Explanation
+
+* **Step 1: Check Row Existence**
+  `mysqli_num_rows($checkResult) === 0` checks whether any database records matched the item search name.
+
+* **Step 2: SQL Relative Increments**
+  Using `quantity = quantity + $amount` inside SQL directly avoids database race condition issues compared to calculating additions inside PHP code.
+
+* **Step 3: Check Modification Count**
+  `mysqli_affected_rows($conn)` returns exact count of database table rows altered by the latest query operation.
+
+---
